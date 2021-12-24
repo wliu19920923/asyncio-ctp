@@ -1,10 +1,9 @@
 import queue
 import fields
 import logging
-from recorders.file import AssetRecorder
-from recorders.memory import OrderRecorder, PositionRecorder
 from utils import is_windows, exception_catcher
 from utils.server_check import check_address_port
+from interface import Contract
 
 if is_windows:
     from ctp.win64 import thosttraderapi
@@ -25,6 +24,10 @@ class TraderApi(thosttraderapi.CThostFtdcTraderSpi):
         self._request_id = request_id
         self.user_login_info = fields.UserLoginInfo()
         self.settlement_info = fields.SettlementInfo()
+        self.position_info = fields.PositionInfo()
+        self.account_info = fields.AccountInfo()
+        self.order_info = fields.OrderInfo()
+        self.contract = Contract()
         self.logger = logger or logging
 
     @property
@@ -68,7 +71,7 @@ class TraderApi(thosttraderapi.CThostFtdcTraderSpi):
             raise TypeError(pRspInfo.ErrorMsg)
         if not pInvestorPosition:
             return
-        # self.pPositionRecorder.update_or_insert(pInvestorPosition)
+        self.position_info.update_or_insert(pInvestorPosition.InstrumentID, pInvestorPosition.ExchangeID, pInvestorPosition.PositionDate, pInvestorPosition.PosiDirection, pInvestorPosition.Position, pInvestorPosition.TodayPosition, pInvestorPosition.YdPosition, pInvestorPosition.PositionCost)
 
     @exception_catcher
     def OnRspQrySettlementInfo(self, pSettlementInfo: thosttraderapi.CThostFtdcSettlementInfoField, pRspInfo: thosttraderapi.CThostFtdcRspInfoField, nRequestId: int, bIsLast: bool):
@@ -89,10 +92,7 @@ class TraderApi(thosttraderapi.CThostFtdcTraderSpi):
             raise TypeError(pRspInfo.ErrorMsg)
         if not pTradingAccount:
             return
-
-            # self.pTodayProfit = round(pTradingAccount.PositionProfit + pTradingAccount.CloseProfit, 3)
-            # record = self.pAssetRecorder.update_or_insert(pTradingAccount)
-            # self.callback('OnRspQryTradingAccount', record)
+        self.account_info = fields.AccountInfo(available=pTradingAccount.Available, frozen=pTradingAccount.FrozenMargin, position_profit=pTradingAccount.PositionProfit, close_profit=pTradingAccount.CloseProfit)
 
     @exception_catcher
     def OnRspOrderInsert(self, pInputOrder: thosttraderapi.CThostFtdcInputOrderField, pRspInfo: thosttraderapi.CThostFtdcRspInfoField, nRequestId: int, bIsLast: bool):
@@ -104,17 +104,14 @@ class TraderApi(thosttraderapi.CThostFtdcTraderSpi):
     def OnRtnOrder(self, pOrder: thosttraderapi.CThostFtdcOrderField):
         if not pOrder or not pOrder.OrderSysID:
             return
-            # record = self.pOrderRecorder.update_or_insert(pOrder)
-        # self.callback('OnRtnOrder', (record, pOrder.SessionID != self.pSessionID and pOrder.CombOffsetFlag == thosttraderapi.THOST_FTDC_OF_Open))
+        self.order_info.update_or_insert(pOrder.OrderRef, pOrder.OrderSysID, pOrder.InstrumentID, pOrder.ExchangeID, pOrder.CombOffsetFlag, pOrder.Direction, pOrder.LimitPrice, pOrder.VolumeTotalOriginal, pOrder.VolumeTraded, pOrder.VolumeTotal, pOrder.OrderStatus)
 
     @exception_catcher
     def OnRtnTrade(self, pTrade: thosttraderapi.CThostFtdcTradeField):
         if not pTrade:
             return
-            # try:
-        #     self.pPositionRecorder.update_or_insert_by_trade(pTrade, self.pContracts[pTrade.InstrumentID]['multiple'])
-        # except Exception as exp:
-        #     self.logger.error(str(exp))
+        multiple = self.contract.get_volume_multiple(pTrade.ExchangeID, pTrade.InstrumentID)
+        self.position_info.update_by_trade(pTrade.InstrumentID, pTrade.ExchangeID, pTrade.OffsetFlag, pTrade.Direction, pTrade.Price, pTrade.Volume, multiple)
 
     @exception_catcher
     def OnRspError(self, pRspInfo: thosttraderapi.CThostFtdcRspInfoField, nRequestId: int, bIsLast: bool):

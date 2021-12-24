@@ -65,23 +65,3 @@ class Recorder(object):
                 break
             records = records.loc[records[key] == value]
         return records.to_dict(orient='records')
-
-    def clear(self):
-        records = self.records
-        self.records = self.records.drop(records.index)
-        self._save()
-        return records.to_dict(orient='records')
-
-    def drop(self, filters):
-        records = self.records[filters]
-        self.records = self.records.drop(records.index)
-        self._save()
-        return records.to_dict(orient='records')
-
-
-if __name__ == '__main__':
-    r = Recorder({'a': int})
-    r.update_or_insert({'a': 1})
-    print(r.query())
-    r.update_or_insert({'a': 2}, a=2)
-    print(r.query())
