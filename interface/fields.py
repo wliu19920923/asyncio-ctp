@@ -126,7 +126,7 @@ class PositionInfo(object):
             records = self.records.loc[(self.records['instrument_id'] == instrument_id) & (self.records['position_date'] == position_date) & (self.records['position_direction'] == position_direction)]
             if records:
                 record = records[0]
-                position_cost = record['position_cost'] - record['cost'] / record['total_position'] * volume
+                position_cost = record['position_cost'] - record['position_cost'] / record['total_position'] * volume
                 total_position = record['total_position'] - volume
                 today_position = record['today_position'] - volume
                 self.update_or_insert(instrument_id, exchange_id, position_date, position_direction, total_position, today_position, record['yesterday_position'], position_cost)
