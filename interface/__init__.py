@@ -1,14 +1,4 @@
-# import os
 import requests
-
-# BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# REASON_CODE = {
-#     4097: '网络读失败',
-#     4098: '网络写失败',
-#     8193: '接收心跳超时',
-#     8194: '发送心跳失败',
-#     8195: '收到错误报文'
-# }
 
 
 class Contract(object):
@@ -23,3 +13,6 @@ class Contract(object):
     def get_volume_multiple(self, exchange, symbol):
         key = '%s.%s' % (exchange.upper(), symbol)
         return self.mapping[key]['volume_multiple']
+
+    def get_future_list(self):
+        return [self.mapping[key] for key in self.mapping if self.mapping[key]['class'] == 'FUTURE']
