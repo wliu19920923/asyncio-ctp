@@ -151,6 +151,9 @@ class PositionInfo(object):
         total_position_cost = self.get_total_position_cost(instrument_id, position_direction)
         return total_position_cost / multiple / total_position
 
+    def query(self, instrument_id):
+        return self.records.loc[self.records['instrument_id'] == instrument_id].to_dict(orient='records')
+
 
 class AccountInfo(object):
     def __init__(self, available=0, frozen=0, position_profit=0, close_profit=0):
